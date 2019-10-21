@@ -1,0 +1,10 @@
+{
+  "extends": [
+    "styleguidejs/typescript"
+  ],
+  "rules": {
+    "id-length": 0,
+    "import/named": 1,
+    "sort-keys": 1
+  }
+}
