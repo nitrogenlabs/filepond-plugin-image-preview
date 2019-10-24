@@ -1,4 +1,4 @@
-let SVG_MASK = `<svg width="500" height="200" viewBox="0 0 500 200" preserveAspectRatio="none">
+let SVG_MASK: string = `<svg width="500" height="200" viewBox="0 0 500 200" preserveAspectRatio="none">
     <defs>
         <radialGradient id="gradient-__UID__" cx=".5" cy="1.25" r="1.15">
             <stop offset='50%' stop-color='#000000'/>
@@ -23,9 +23,6 @@ let SVGMaskUniqueId: number = 0;
 
 export const createImageOverlayView = (fpAPI) =>
   fpAPI.utils.createView({
-    name: 'image-preview-overlay',
-    tag: 'div',
-    ignoreRect: true,
     create: ({root, props}) => {
       if(!checkedMyBases && document.querySelector('base')) {
         SVG_MASK = SVG_MASK.replace(/url\(\#/g, `url(${window.location.href.replace(window.location.hash, '')}#`);
@@ -36,10 +33,13 @@ export const createImageOverlayView = (fpAPI) =>
       root.element.classList.add(`filepond--image-preview-overlay-${props.status}`);
       root.element.innerHTML = SVG_MASK.replace(/__UID__/g, SVGMaskUniqueId as any);
     },
+    ignoreRect: true,
     mixins: {
-      styles: ['opacity'],
       animations: {
-        opacity: {type: 'spring', mass: 25}
-      }
-    }
+        opacity: {mass: 25, type: 'spring'}
+      },
+      styles: ['opacity']
+    },
+    name: 'image-preview-overlay',
+    tag: 'div'
   });

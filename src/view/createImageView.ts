@@ -1,18 +1,16 @@
-import {getCenteredCropRect, getCurrentCropSize, getImageRectZoomFactor} from '../utils/crop';
+import {getCurrentCropSize} from '../utils/crop';
 import {createMarkupView} from './createMarkupView';
 
 const IMAGE_SCALE_SPRING_PROPS = {
-  type: 'spring',
-  stiffness: 0.5,
   damping: 0.45,
-  mass: 10
+  mass: 10,
+  stiffness: 0.5,
+  type: 'spring'
 };
 
 // does horizontal and vertical flipping
 const createBitmapView = (bitmapView) => bitmapView.utils.createView({
-  create: ({root, props: {image}}) => {
-    root.appendChild(image);
-  },
+  create: ({root, props: {image}}) => root.appendChild(image),
   ignoreRect: true,
   mixins: {styles: ['scaleX', 'scaleY']},
   name: 'image-bitmap'
@@ -24,12 +22,10 @@ const createImageCanvasWrapper = (wrapper) => wrapper.utils.createView({
     const {image} = props;
     const {height: imageHeight, width: imageWidth} = image;
 
-    props.width = imageWidth;
-    props.height = imageHeight;
+    props.width = Math.min(imageHeight, imageWidth);
+    props.height = props.width;
 
-    root.ref.bitmap = root.appendChildView(
-      root.createChildView(createBitmapView(wrapper), {image})
-    );
+    root.ref.bitmap = root.appendChildView(root.createChildView(createBitmapView(wrapper), {image}));
   },
   ignoreRect: true,
   mixins: {
@@ -79,9 +75,7 @@ const createClipView = (clipView) => clipView.utils.createView({
         return null;
       }
 
-      root.ref.markup = root.appendChildView(
-        root.createChildView(createMarkupView(clipView), {...props})
-      );
+      root.ref.markup = root.appendChildView(root.createChildView(createMarkupView(clipView), {...props}));
 
       return null;
     };
@@ -139,7 +133,28 @@ const createClipView = (clipView) => clipView.utils.createView({
   name: 'image-clip',
   tag: 'div',
   write: ({root, props, shouldOptimize}) => {
-    const {crop, markup, resize, dirty, width, height} = props;
+    const {
+      crop,
+      dirty,
+      height,
+      image: {clientWidth: imageWidth, clientHeight: imageHeight},
+      markup,
+      resize,
+      width
+    } = props;
+    let scaleHeight: number = 1;
+    let scaleWidth: number = 1;
+
+    if(imageHeight > height && imageWidth > width) {
+      scaleHeight = Math.min(imageHeight, height) / Math.max(imageHeight, height);
+      scaleWidth = Math.min(imageWidth, width) / Math.max(imageWidth, width);
+    } else {
+      scaleHeight = Math.max(imageHeight, height) / Math.min(imageHeight, height);
+      scaleWidth = Math.max(imageWidth, width) / Math.min(imageWidth, width);
+    }
+
+    // const scale = crop.zoom * stageZoomFactor;
+    const scale: number = Math.max(scaleHeight, scaleWidth);
 
     root.ref.image.crop = crop;
 
@@ -155,39 +170,20 @@ const createClipView = (clipView) => clipView.utils.createView({
     };
 
     const image = {
-      height: root.ref.image.height,
-      width: root.ref.image.width
+      height: imageHeight * scale,
+      width: imageWidth * scale
     };
-
     const origin = {
-      x: crop.center.x * image.width,
-      y: crop.center.y * image.height
+      x: crop.center.x * (image.width - width),
+      y: crop.center.y * (image.height - height)
     };
-
     const translation = {
-      x: stage.center.x - (image.width * crop.center.x),
-      y: stage.center.y - (image.height * crop.center.y)
+      x: (stage.center.x * (1 / crop.center.x)) - image.width,
+      y: (stage.center.y * (1 / crop.center.y)) - image.height
     };
-
     const rotation = (Math.PI * 2) + (crop.rotation % (Math.PI * 2));
 
-    const cropAspectRatio = crop.aspectRatio || image.height / image.width;
-
-    const shouldLimit = typeof crop.scaleToFit === 'undefined' || crop.scaleToFit;
-
-    const stageZoomFactor = getImageRectZoomFactor(
-      image,
-      getCenteredCropRect(
-        stage,
-        cropAspectRatio
-      ),
-      rotation,
-      shouldLimit ? crop.center : {x: .5, y: .5}
-    );
-
-    const scale = crop.zoom * stageZoomFactor;
-
-    // update markup view
+    // Update markup view
     if(markup && markup.length) {
       root.ref.createMarkup();
       root.ref.markup.width = width;
@@ -212,7 +208,8 @@ const createClipView = (clipView) => clipView.utils.createView({
       imageView.rotateZ = null;
       imageView.scaleX = null;
       imageView.scaleY = null;
-      return;
+
+      return null;
     }
 
     imageView.originX = origin.x;
@@ -268,66 +265,25 @@ export const createImageView = (imageView) => imageView.utils.createView({
   tag: 'div',
   write: ({root, props, shouldOptimize}) => {
     const {clip} = root.ref;
-    const {image, crop, markup, resize, dirty} = props;
+    const {crop, markup, resize, dirty} = props;
 
     clip.crop = crop;
     clip.markup = markup;
     clip.resize = resize;
     clip.dirty = dirty;
 
-    // don't update clip layout
+    // Don't update clip layout
     clip.opacity = shouldOptimize ? 0 : 1;
 
-    // don't re-render if optimizing or hidden (width will be zero resulting in weird animations)
+    // Don't re-render if optimizing or hidden (width will be zero resulting in weird animations)
     if(shouldOptimize || root.rect.element.hidden) {
       return null;
     }
 
-    // calculate scaled preview image size
-    const imageAspectRatio = image.height / image.width;
-    let aspectRatio = crop.aspectRatio || imageAspectRatio;
+    const fixedPreviewHeight: number = root.query('GET_IMAGE_PREVIEW_HEIGHT');
 
-    // calculate container size
-    const containerWidth = root.rect.inner.width;
-    const containerHeight = root.rect.inner.height;
-
-    let fixedPreviewHeight = root.query('GET_IMAGE_PREVIEW_HEIGHT');
-    const minPreviewHeight = root.query('GET_IMAGE_PREVIEW_MIN_HEIGHT');
-    const maxPreviewHeight = root.query('GET_IMAGE_PREVIEW_MAX_HEIGHT');
-
-    const panelAspectRatio = root.query('GET_PANEL_ASPECT_RATIO');
-    const allowMultiple = root.query('GET_ALLOW_MULTIPLE');
-
-    if(panelAspectRatio && !allowMultiple) {
-      fixedPreviewHeight = containerWidth * panelAspectRatio;
-      aspectRatio = panelAspectRatio;
-    }
-
-    // determine clip width and height
-    let clipHeight =
-      fixedPreviewHeight !== null
-        ? fixedPreviewHeight
-        : Math.max(
-          minPreviewHeight,
-          Math.min(
-            containerWidth * aspectRatio,
-            maxPreviewHeight
-          )
-        );
-
-    let clipWidth = clipHeight / aspectRatio;
-    if(clipWidth > containerWidth) {
-      clipWidth = containerWidth;
-      clipHeight = clipWidth * aspectRatio;
-    }
-
-    if(clipHeight > containerHeight) {
-      clipHeight = containerHeight;
-      clipWidth = containerHeight / aspectRatio;
-    }
-
-    clip.width = clipWidth;
-    clip.height = clipHeight;
+    clip.width = fixedPreviewHeight;
+    clip.height = fixedPreviewHeight;
 
     return null;
   }
