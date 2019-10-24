@@ -41,7 +41,7 @@ export const createMarkupView = (markupView) => markupView.utils.createView({
       let outputWidth = size && size.width;
       let outputHeight = size && size.height;
       const outputFit = resize.mode;
-      const outputUpscale = resize.upscale;
+      const outputUpscale: number = resize.upscale;
 
       if(outputWidth && !outputHeight) {
         outputHeight = outputWidth;
@@ -51,11 +51,11 @@ export const createMarkupView = (markupView) => markupView.utils.createView({
         outputWidth = outputHeight;
       }
 
-      const shouldUpscale = cropWidth < outputWidth && cropHeight < outputHeight;
+      const shouldUpscale: boolean = cropWidth < outputWidth && cropHeight < outputHeight;
 
       if(!shouldUpscale || (shouldUpscale && outputUpscale)) {
-        const scalarWidth = outputWidth / cropWidth;
-        const scalarHeight = outputHeight / cropHeight;
+        const scalarWidth: number = outputWidth / cropWidth;
+        const scalarHeight: number = outputHeight / cropHeight;
 
         if(outputFit === 'force') {
           cropWidth = outputWidth;
@@ -81,7 +81,7 @@ export const createMarkupView = (markupView) => markupView.utils.createView({
     root.element.setAttribute('width', size.width);
     root.element.setAttribute('height', size.height);
 
-    const scale = Math.min(
+    const scale: number = Math.max(
       viewWidth / cropWidth,
       viewHeight / cropHeight
     );
