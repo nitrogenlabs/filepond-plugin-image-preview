@@ -22,7 +22,7 @@ const loadImage = (url) => new Promise((resolve, reject) => {
 });
 
 export const createImageWrapperView = (imageWrapper) => {
-  // create overlay view
+  // Create overlay view
   const OverlayView = createImageOverlayView(imageWrapper);
   const ImageView = createImageView(imageWrapper);
   const {createWorker} = imageWrapper.utils;
@@ -33,7 +33,7 @@ export const createImageWrapperView = (imageWrapper) => {
       root.ref.imageData = target.getContext('2d').getImageData(0, 0, target.width, target.height);
     }
 
-    // get image data reference
+    // Get image data reference
     const imageData = cloneImageData(root.ref.imageData);
 
     if(!filter || filter.length !== 20) {
@@ -45,13 +45,13 @@ export const createImageWrapperView = (imageWrapper) => {
     worker.post(
       {colorMatrix: filter, imageData},
       (response) => {
-        // apply filtered colors
+        // Apply filtered colors
         target.getContext('2d').putImageData(response, 0, 0);
 
-        // stop worker
+        // Stop worker
         worker.terminate();
 
-        // done!
+        // Done!
         resolve();
       },
       [imageData.data.buffer]
@@ -65,7 +65,7 @@ export const createImageWrapperView = (imageWrapper) => {
     imageView._destroy();
   };
 
-  // remove an image
+  // Remove an image
   const shiftImage = ({root}) => {
     const imageView = root.ref.images.shift();
     imageView.opacity = 0;
@@ -74,7 +74,7 @@ export const createImageWrapperView = (imageWrapper) => {
     return imageView;
   };
 
-  // add new image
+  // Add new image
   const pushImage = ({root, props, image}) => {
     const {id} = props;
     const item = root.query('GET_ITEM', {id});
@@ -108,7 +108,7 @@ export const createImageWrapperView = (imageWrapper) => {
       dirty = true;
     }
 
-    // append image presenter
+    // Append image presenter
     const imageView = root.appendChildView(
       root.createChildView(ImageView, {
         background,
@@ -127,13 +127,13 @@ export const createImageWrapperView = (imageWrapper) => {
     );
     root.ref.images.push(imageView);
 
-    // reveal the preview image
+    // Reveal the preview image
     imageView.opacity = 1;
     imageView.scaleX = 1;
     imageView.scaleY = 1;
     imageView.translateY = 0;
 
-    // the preview is now ready to be drawn
+    // The preview is now ready to be drawn
     setTimeout(() => root.dispatch('DID_IMAGE_PREVIEW_SHOW', {id}), 250);
 
     return null;
@@ -161,23 +161,23 @@ export const createImageWrapperView = (imageWrapper) => {
 
   // replace image preview
   const didUpdateItemMetadata = ({root, props, action}) => {
-    // only filter and crop trigger redraw
+    // Only filter and crop trigger redraw
     if(!/crop|filter|markup|resize/.test(action.change.key)) {
       return null;
     }
 
-    // no images to update, exit
+    // No images to update, exit
     if(!root.ref.images.length) {
       return null;
     }
 
-    // no item found, exit
+    // No item found, exit
     const item = root.query('GET_ITEM', {id: props.id});
     if(!item) {
       return null;
     }
 
-    // for now, update existing image when filtering
+    // For now, update existing image when filtering
     if(/filter/.test(action.change.key)) {
       const imageView = root.ref.images[root.ref.images.length - 1];
       applyFilter(root, action.change.value, imageView.image);
@@ -209,18 +209,19 @@ export const createImageWrapperView = (imageWrapper) => {
   const didCreatePreviewContainer = ({root, props}) => {
     const {id} = props;
 
-    // we need to get the file data to determine the eventual image size
+    // We need to get the file data to determine the eventual image size
     const item = root.query('GET_ITEM', id);
+
     if(!item) {
       return null;
     }
 
-    // get url to file (we'll revoke it later on when done)
+    // Get url to file (we'll revoke it later on when done)
     const fileURL = URL.createObjectURL(item.file);
 
-    // determine image size of this item
+    // Determine image size of this item
     getImageSize(fileURL, (width, height) => {
-      // we can now scale the panel to the final size
+      // We can now scale the panel to the final size
       root.dispatch('DID_IMAGE_PREVIEW_CALCULATE_SIZE', {
         height,
         id,
@@ -232,48 +233,49 @@ export const createImageWrapperView = (imageWrapper) => {
   const drawPreview = ({root, props}) => {
     const {id} = props;
 
-    // we need to get the file data to determine the eventual image size
+    // We need to get the file data to determine the eventual image size
     const item = root.query('GET_ITEM', id);
 
     if(!item) {
       return null;
     }
 
-    // get url to file (we'll revoke it later on when done)
+    // Get url to file (we'll revoke it later on when done)
     const fileURL = URL.createObjectURL(item.file);
 
-    // image is now ready
+    // Image is now ready
     const previewImageLoaded = (imageData) => {
       // the file url is no longer needed
       URL.revokeObjectURL(fileURL);
 
-      // draw the scaled down version here and use that as source so bitmapdata can be closed
+      // Draw the scaled down version here and use that as source so bitmapdata can be closed
       // orientation info
       const exif = item.getMetadata('exif') || {};
       const orientation: number = exif.orientation || -1;
 
       // get width and height from action, and swap if orientation is incorrect
       let {width, height} = imageData;
+
       if(orientation >= 5 && orientation <= 8) {
         [width, height] = [height, width];
       }
 
-      // scale canvas based on pixel density
-      // we multiply by .75 as that creates smaller but still clear images on screens with high res displays
+      // Scale canvas based on pixel density
+      // We multiply by .75 as that creates smaller but still clear images on screens with high res displays
       const pixelDensityFactor: number = Math.max(1, window.devicePixelRatio * .75);
 
-      // we want as much pixels to work with as possible,
+      // We want as much pixels to work with as possible,
       // this multiplies the minimum image resolution,
       // so when zooming in it doesn't get too blurry
       const zoomFactor: number = root.query('GET_IMAGE_PREVIEW_ZOOM_FACTOR');
 
-      // imaeg scale factor
+      // Image scale factor
       const scaleFactor: number = zoomFactor * pixelDensityFactor;
 
-      // calculate scaled preview image size
+      // Calculate scaled preview image size
       const previewImageRatio: number = height / width;
 
-      // calculate image preview height and width
+      // Calculate image preview height and width
       const previewContainerWidth: number = root.rect.element.width;
       const previewContainerHeight: number = root.rect.element.height;
 
@@ -288,30 +290,30 @@ export const createImageWrapperView = (imageWrapper) => {
         imageWidth = imageHeight / previewImageRatio;
       }
 
-      // transfer to image tag so no canvas memory wasted on iOS
+      // Transfer to image tag so no canvas memory wasted on iOS
       const previewImage = createPreviewImage(imageData, imageWidth, imageHeight, orientation);
 
-      // done
+      // Done
       const done = (data) => {
-        // calculate average image color, disabled for now
+        // Calculate average image color, disabled for now
         const averageColor = root.query('GET_IMAGE_PREVIEW_CALCULATE_AVERAGE_IMAGE_COLOR')
           ? calculateAverageColor(data)
           : null;
         item.setMetadata('color', averageColor, true);
 
-        // data has been transferred to canvas ( if was ImageBitmap )
+        // Data has been transferred to canvas ( if was ImageBitmap )
         if('close' in imageData) {
           imageData.close();
         }
 
-        // show the overlay
+        // Show the overlay
         root.ref.overlayShadow.opacity = 1;
 
-        // create the first image
+        // Create the first image
         pushImage({image: previewImage, props, root});
       };
 
-      // apply filter
+      // Apply filter
       const filter = item.getMetadata('filter');
       if(filter) {
         applyFilter(root, filter, previewImage).then(done);
@@ -320,36 +322,36 @@ export const createImageWrapperView = (imageWrapper) => {
       }
     };
 
-    // fallback
+    // Fallback
     const loadPreviewFallback = () => {
-      // let's scale the image in the main thread :(
+      // Let's scale the image in the main thread :(
       loadImage(fileURL).then(previewImageLoaded);
     };
 
-    // if we support scaling using createImageBitmap we use a worker
+    // If we support scaling using createImageBitmap we use a worker
     if(canCreateImageBitmap(item.file)) {
-      // let's scale the image in a worker
+      // Let's scale the image in a worker
       const worker = createWorker(BitmapWorker);
 
       worker.post(
         {file: item.file},
         (imageBitmap) => {
-          // destroy worker
+          // Destroy worker
           worker.terminate();
 
-          // no bitmap returned, must be something wrong,
-          // try the oldschool way
+          // No bitmap returned, must be something wrong,
+          // Try the oldschool way
           if(!imageBitmap) {
             loadPreviewFallback();
             return;
           }
 
-          // yay we got our bitmap, let's continue showing the preview
+          // Yay we got our bitmap, let's continue showing the preview
           previewImageLoaded(imageBitmap);
         }
       );
     } else {
-      // create fallback preview
+      // Create fallback preview
       loadPreviewFallback();
     }
 
@@ -418,7 +420,7 @@ export const createImageWrapperView = (imageWrapper) => {
     apis: ['height'],
     create,
     destroy: ({root}) => {
-      // we resize the image so memory on iOS 12 is released more quickly (it seems)
+      // We resize the image so memory on iOS 12 is released more quickly (it seems)
       root.ref.images.forEach((imageView) => {
         imageView.image.width = 1;
         imageView.image.height = 1;
@@ -445,7 +447,7 @@ export const createImageWrapperView = (imageWrapper) => {
       DID_THROW_ITEM_PROCESSING_ERROR: didThrowError
     }, ({root}) => {
       // Views on death row
-      const viewsToRemove = root.ref.imageViewBin.filter((imageView) => imageView.opacity === 0);
+      const viewsToRemove: any[] = root.ref.imageViewBin.filter((imageView) => imageView.opacity === 0);
 
       // Views to retain
       root.ref.imageViewBin = root.ref.imageViewBin.filter((imageView) => imageView.opacity > 0);

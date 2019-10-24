@@ -1,4 +1,4 @@
-import {getCenteredCropRect, getCurrentCropSize, getImageRectZoomFactor} from '../utils/crop';
+import {getCurrentCropSize} from '../utils/crop';
 import {createMarkupView} from './createMarkupView';
 
 const IMAGE_SCALE_SPRING_PROPS = {
@@ -24,8 +24,6 @@ const createImageCanvasWrapper = (wrapper) => wrapper.utils.createView({
 
     props.width = Math.min(imageHeight, imageWidth);
     props.height = props.width;
-    // props.width = imageWidth;
-    // props.height = imageHeight;
 
     root.ref.bitmap = root.appendChildView(root.createChildView(createBitmapView(wrapper), {image}));
   },
@@ -158,7 +156,6 @@ const createClipView = (clipView) => clipView.utils.createView({
     // const scale = crop.zoom * stageZoomFactor;
     const scale: number = Math.max(scaleHeight, scaleWidth);
 
-    console.log('createImageView::props', props);
     root.ref.image.crop = crop;
 
     const stage = {
@@ -176,26 +173,17 @@ const createClipView = (clipView) => clipView.utils.createView({
       height: imageHeight * scale,
       width: imageWidth * scale
     };
-
-    console.log('createImageView::ref.image', root.ref.image);
     const origin = {
-      x: crop.center.x * (image.width - width), // 0.5 * (408 - x) = 0.8
+      x: crop.center.x * (image.width - width),
       y: crop.center.y * (image.height - height)
     };
-
-    console.log('createImageView::stage', stage);
-    console.log('createImageView::crop', crop);
-    console.log('createImageView::image', image);
     const translation = {
       x: (stage.center.x * (1 / crop.center.x)) - image.width,
       y: (stage.center.y * (1 / crop.center.y)) - image.height
     };
-    console.log('createImageView::origin', origin);
-    console.log('createImageView::translation', translation);
-
     const rotation = (Math.PI * 2) + (crop.rotation % (Math.PI * 2));
 
-    // update markup view
+    // Update markup view
     if(markup && markup.length) {
       root.ref.createMarkup();
       root.ref.markup.width = width;
@@ -220,7 +208,8 @@ const createClipView = (clipView) => clipView.utils.createView({
       imageView.rotateZ = null;
       imageView.scaleX = null;
       imageView.scaleY = null;
-      return;
+
+      return null;
     }
 
     imageView.originX = origin.x;
@@ -283,15 +272,15 @@ export const createImageView = (imageView) => imageView.utils.createView({
     clip.resize = resize;
     clip.dirty = dirty;
 
-    // don't update clip layout
+    // Don't update clip layout
     clip.opacity = shouldOptimize ? 0 : 1;
 
-    // don't re-render if optimizing or hidden (width will be zero resulting in weird animations)
+    // Don't re-render if optimizing or hidden (width will be zero resulting in weird animations)
     if(shouldOptimize || root.rect.element.hidden) {
       return null;
     }
 
-    const fixedPreviewHeight = root.query('GET_IMAGE_PREVIEW_HEIGHT');
+    const fixedPreviewHeight: number = root.query('GET_IMAGE_PREVIEW_HEIGHT');
 
     clip.width = fixedPreviewHeight;
     clip.height = fixedPreviewHeight;
