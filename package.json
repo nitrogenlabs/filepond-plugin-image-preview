@@ -9,7 +9,7 @@
   },
   "homepage": "https://github.com/nitrogenlabs/filepond-plugin-image-preview",
   "repository": "nitrogenlabs/filepond-plugin-image-preview",
-  "main": "dist/filepond-plugin-image-preview.js",
+  "main": "dist/index.js",
   "browser": "dist/index.js",
   "module": "dist/index.js",
   "browserslist": [
